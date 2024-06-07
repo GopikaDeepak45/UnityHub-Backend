@@ -8,9 +8,9 @@ import { ConflictError } from "../errors/ConflictError";
 
 const commAdminRegster=asyncErrorHandler(async(req:Request,res:Response,next:NextFunction)=>{
  
-    const {name,email,password,conformPassword,mobileNo,communityName,communityLocation}=req.body
+    const {name,email,password,confirmPassword,mobileNo,communityName,communityLocation}=req.body
 
-    if (password !== conformPassword) {
+    if (password !== confirmPassword) {
       // return res.json({ message: "Passwords do not match" });
       throw new BadRequestError("Passwords do not match");
   }
@@ -21,13 +21,18 @@ const commAdminRegster=asyncErrorHandler(async(req:Request,res:Response,next:Nex
     throw new ConflictError('A community with this name and location already exists.');
   }
 
+  const existingCommunityName = await Community.findOne({ name: communityName });
+        
+  if (existingCommunityName) {
+    throw new ConflictError('A community with this name  already exists.');
+  }
 // Create the community
 const community = await Community.create({ name: communityName, location: communityLocation });
 
 //check if mail id exixts
-const exixtingCommAdmin=await CommAdmin.findOne({email})
+const existingCommAdmin=await CommAdmin.findOne({email})
 
-if(exixtingCommAdmin){
+if(existingCommAdmin){
   throw new ConflictError('Email already exists');
 }
    // Create the community admin
@@ -58,7 +63,7 @@ const verifyOTP=asyncErrorHandler(async(req:Request,res:Response,next:NextFuncti
   const{pin,commAdminId}=req.body
 
   const commAdmin=await CommAdmin.findById(commAdminId)
-  console.log('otp db',commAdmin?.otp,pin)
+  
   if(commAdmin?.otp===pin){
     res.status(200).json({message:'OTP verified'})
   }else{

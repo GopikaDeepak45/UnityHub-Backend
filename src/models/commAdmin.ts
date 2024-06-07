@@ -42,7 +42,7 @@ const commAdminSchema: Schema<ICommAdmin> = new mongoose.Schema({
     required:true    },
     otp:{
         type:String
-    }
+    },
 }, {
     timestamps: true
 });

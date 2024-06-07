@@ -11,6 +11,13 @@ const communitySchema = new mongoose.Schema({
         required: true
     },
     
+    isBlocked:{
+        type:Boolean,
+        default:false
+    },
+    blockReason:{
+        type:String
+    }
 }, {
     timestamps: true
 });

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -9,36 +9,52 @@ import {
   generateRefreshToken,
 } from "../utils/generateToken";
 import CommAdmin from "../models/commAdmin";
+import { ForbiddenError } from "../errors/ForbiddenError";
 
 
-const login = asyncErrorHandler(async (req: Request, res: Response) => {
+const login = asyncErrorHandler(async (req: Request, res: Response,next:NextFunction) => {
   const { email, password, role } = req.body;
 
-  let foundUser;
+  console.log('enterd login')
+
+  let foundUser:any;
 
   if (!email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
   if (role === "admin") {
-
     foundUser = await Admin.findOne({ email });
 
   }
   if (role === "commAdmin") {
-    foundUser = await CommAdmin.findOne({ email }).exec();
+    
+    foundUser = await CommAdmin.findOne({ email }).populate('communityId').exec();
+    
   }
   if (role === "user") {
     foundUser = await Admin.findOne({ email }).exec();
   }
-
   if (!foundUser) {
     return res.status(401).json({ message: "Unauthorized" });
   }
+  console.log('found user - ',foundUser)
 
   const match = await bcrypt.compare(password, foundUser.password);
 
 
   if (!match) return res.status(401).json({ message: "Unauthorized" });
+  console.log('match - ',match)
+
+  if (role === "commAdmin") {
+    console.log('role check')
+    // Check if the community is blocked
+    if (foundUser.communityId?.isBlocked) {
+      const errorMessage = "This community is blocked. You cannot log in.";
+      return res.json({ error: { message: errorMessage } });
+    }
+    
+    
+  }
 
   const accessToken = generateAccessToken(foundUser.userName, foundUser._id, foundUser.role);
   const refreshToken = generateRefreshToken(foundUser.userName, foundUser._id, foundUser.role);

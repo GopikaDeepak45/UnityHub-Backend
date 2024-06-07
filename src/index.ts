@@ -6,7 +6,7 @@ import connectDB from './config/database'
 import adminRoutes from './routes/adminRoutes'
 import commAdminRoutes from './routes/commAdminRoutes'
 import { errorHandler } from './middlewares/errorHandler'
-import { getLandingPage } from './controllers/landingPageControlller'
+import { getLandingPage, sendMail } from './controllers/landingPageControlller'
 import authRoutes from './routes/authRoutes';
 import ConnectCloudinary from './config/cloudinary';
 
@@ -27,6 +27,7 @@ ConnectCloudinary()
 app.use(cookieParser())
 
 app.get('/api/landing-page',getLandingPage)
+app.post('/api/contact',sendMail)
 
 app.use('/api/auth', authRoutes)
 app.use('/api/admin',adminRoutes);
