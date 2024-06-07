@@ -95,13 +95,9 @@ const refresh = asyncErrorHandler(async (req: Request, res: Response) => {
       if (role === 'admin') {
         foundUser = await Admin.findById(userId)
       }
-
       if (!foundUser) return res.status(401).json({ message: "Unauthorized" });
       accessToken = generateAccessToken(foundUser.userName, foundUser._id, foundUser.role);
-
       res.json({ accessToken });
-
-
     }
   );
 });
