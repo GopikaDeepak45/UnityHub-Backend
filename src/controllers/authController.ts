@@ -10,12 +10,11 @@ import {
 } from "../utils/generateToken";
 import CommAdmin from "../models/commAdmin";
 import { ForbiddenError } from "../errors/ForbiddenError";
+import User from "../models/user";
 
 
 const login = asyncErrorHandler(async (req: Request, res: Response,next:NextFunction) => {
   const { email, password, role } = req.body;
-
-  console.log('enterd login')
 
   let foundUser:any;
 
@@ -32,21 +31,20 @@ const login = asyncErrorHandler(async (req: Request, res: Response,next:NextFunc
     
   }
   if (role === "user") {
-    foundUser = await Admin.findOne({ email }).exec();
+    foundUser = await User.findOne({ email }).populate('communityId').exec();
+    console.log('f user',foundUser)
   }
   if (!foundUser) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  console.log('found user - ',foundUser)
-
   const match = await bcrypt.compare(password, foundUser.password);
 
 
   if (!match) return res.status(401).json({ message: "Unauthorized" });
-  console.log('match - ',match)
+ 
 
   if (role === "commAdmin") {
-    console.log('role check')
+   
     // Check if the community is blocked
     if (foundUser.communityId?.isBlocked) {
       const errorMessage = "This community is blocked. You cannot log in.";
@@ -54,6 +52,19 @@ const login = asyncErrorHandler(async (req: Request, res: Response,next:NextFunc
     }
     
     
+  }
+  if(role==='user'){
+    // Check if the community is blocked
+    if (foundUser.communityId?.isBlocked) {
+      const errorMessage = "This community is blocked. You cannot log in.";
+      return res.json({ error: { message: errorMessage } });
+    }
+    // Check if the community is blocked
+    if (foundUser.isBlocked) {
+      const errorMessage = "Your account is blocked. You cannot log in.";
+      return res.json({ error: { message: errorMessage } });
+    }
+
   }
 
   const accessToken = generateAccessToken(foundUser.userName, foundUser._id, foundUser.role);

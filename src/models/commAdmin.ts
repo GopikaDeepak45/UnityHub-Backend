@@ -6,11 +6,10 @@ interface ICommAdmin extends Document {
     role:string;
     userName:string
     communityId: mongoose.Types.ObjectId;
-
     email: string;
     password: string;
    mobileNo:number
-   otp:string
+   isVerified:boolean
 }
 
 
@@ -39,9 +38,11 @@ const commAdminSchema: Schema<ICommAdmin> = new mongoose.Schema({
     },
     mobileNo:{
         type:Number,
-    required:true    },
-    otp:{
-        type:String
+    required:true    
+    },
+    isVerified:{
+        type:Boolean,
+        default:false
     },
 }, {
     timestamps: true

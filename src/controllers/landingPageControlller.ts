@@ -23,11 +23,46 @@ const getLandingPage = asyncErrorHandler(async (req: CustomRequest, res: Respons
 
     if (!landingPage) {
 
-        throw new NotFoundError()
+        throw new NotFoundError('No data found')
     }
     res.status(200).json(landingPage);
+   
 });
+const getLandingPageWithSearch = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction): Promise<void> => {
 
+    // const landingPage = await LandingPage.findOne();
+
+    // if (!landingPage) {
+
+    //     throw new NotFoundError('No data found')
+    // }
+    // res.status(200).json(landingPage);
+    const { searchQuery } = req.query as { searchQuery?: string };
+    let filter = {};
+    let landingPage
+console.log('called fetch lp data with',searchQuery)
+
+    if (searchQuery!==undefined) {
+        filter = {
+            $or: [
+                { name: { $regex: new RegExp(searchQuery, 'i') } }, // Case-insensitive search by name
+                { shortDescription: { $regex: new RegExp(searchQuery, 'i') } } // Case-insensitive search by shortDescription
+            ]
+        };
+        landingPage = await LandingPage.find(filter);
+         // Return an empty array if no documents are found
+    if (!landingPage || landingPage.length === 0) {
+        res.status(200).json([]);
+        return;
+    }
+    }
+
+     landingPage = await LandingPage.find();
+
+   
+
+    res.status(200).json(landingPage);
+});
 const addImage = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction): Promise<void> => {
 
     const { imageType, imageUrl, publicId } = req.body
@@ -161,13 +196,17 @@ const editCorePackage = asyncErrorHandler(async (req: CustomRequest, res: Respon
     const existingPackageIndex = landingPage?.corePackage.findIndex(pkg => (pkg as any)._id.toString() === id);
 
     if (existingPackageIndex === -1 || existingPackageIndex === undefined) {
-        throw new NotFoundError();
+        throw new NotFoundError('No package data found');
     }
     const existingPackage = landingPage?.corePackage[existingPackageIndex];
     if (!existingPackage) {
-        throw new NotFoundError();
+        throw new NotFoundError('No package data found');
     }
-
+// Check for name conflict, excluding the current package being edited
+const nameConflict = landingPage.corePackage.find(pkg => pkg.name.toLowerCase() === name.toLowerCase());
+if (nameConflict) {
+    throw new ConflictError('A core package with the same name already exists');
+}
     //store old image data to delete from cloudinary
     const oldImage = existingPackage.image
 
@@ -200,20 +239,20 @@ console.log('entered delete pkg',req.body)
 const landingPage = await LandingPage.findOne();
 if (!landingPage) {
 
-    throw new NotFoundError()
+    throw new NotFoundError('No data found')
 }
 const existingPackageIndex = landingPage?.corePackage.findIndex(pkg => (pkg as any)._id.toString() === id);
 
 const existingPackage = landingPage?.corePackage[existingPackageIndex];
     if (!existingPackage) {
-        throw new NotFoundError();
+        throw new NotFoundError('No package found');
     }
 
     //store old image data to delete from cloudinary
     const oldImage = existingPackage.image
 
 if (existingPackageIndex === -1 || existingPackageIndex === undefined) {
-    throw new NotFoundError();
+    throw new NotFoundError('Existing package image not found');
 }
 // Remove the package from the array
 landingPage.corePackage.splice(existingPackageIndex, 1);
@@ -227,7 +266,7 @@ res.status(200).json({ message: 'Package deleted successfully' });
 
 const sendMail = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction): Promise<void> => {
     const { name, email, message } = req.body
-    console.log('entered send mail')
+
     const to = 'gunityhubgopz@gmail.com'
     const sub = `Email from ${name}, mail id - ${email}`
     const msg = message
@@ -239,6 +278,7 @@ const sendMail = asyncErrorHandler(async (req: CustomRequest, res: Response, nex
 
 export {
     getLandingPage,
+    getLandingPageWithSearch,
     addImage,
     deleteImage,
     addCorePackage,

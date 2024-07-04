@@ -1,5 +1,7 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+import { ForbiddenError } from '../errors/ForbiddenError';
+import { AuthenticationError } from '../errors/AuthenticationError';
 
 // Define a custom interface that extends Express's Request interface
 interface CustomRequest extends Request {
@@ -35,10 +37,11 @@ const verifyToken = (req: CustomRequest, res: Response, next: NextFunction) => {
 
             if (err) {
                 
-                return res.status(403).json({ message: 'Forbidden' });
+                
+                throw new ForbiddenError('Forbidden')
             }
             if (!decoded) {
-                return res.status(401).json({ message: 'Unauthorized' });
+                throw new AuthenticationError()
             }
 
             const decodedUserInfo = decoded as JwtPayload;
