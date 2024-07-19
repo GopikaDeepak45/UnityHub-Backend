@@ -14,6 +14,7 @@ import User from "../models/user";
 
 
 const login = asyncErrorHandler(async (req: Request, res: Response,next:NextFunction) => {
+
   const { email, password, role } = req.body;
 
   let foundUser:any;
@@ -32,8 +33,9 @@ const login = asyncErrorHandler(async (req: Request, res: Response,next:NextFunc
   }
   if (role === "user") {
     foundUser = await User.findOne({ email }).populate('communityId').exec();
-    console.log('f user',foundUser)
+   
   }
+ 
   if (!foundUser) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -106,6 +108,15 @@ const refresh = asyncErrorHandler(async (req: Request, res: Response) => {
       if (role === 'admin') {
         foundUser = await Admin.findById(userId)
       }
+      if (role === 'commAdmin') {
+        foundUser = await CommAdmin.findById(userId)
+      }
+      
+      if (role === 'user') {
+        foundUser = await User.findById(userId)
+      }
+      
+      
 
       if (!foundUser) return res.status(401).json({ message: "Unauthorized" });
       accessToken = generateAccessToken(foundUser.userName, foundUser._id, foundUser.role);

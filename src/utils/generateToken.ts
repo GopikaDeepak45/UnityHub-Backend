@@ -11,7 +11,7 @@ const generateAccessToken = (username: string,userId:string ,role: string) => {
             }
         },
         process.env.ACCESS_TOKEN_SECRET as string,
-        { expiresIn: '1d' }
+        { expiresIn: '2d' }
     );
 };
 

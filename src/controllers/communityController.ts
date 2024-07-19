@@ -147,7 +147,7 @@ const editCommunityMember = asyncErrorHandler(async (req: Request, res: Response
   }
 
   // Update member details
-  member.fullName = fullName;
+  member.userName = fullName;
   member.email = email;
   member.contactNo = contactNo;
   member.flatNo = flatNo;

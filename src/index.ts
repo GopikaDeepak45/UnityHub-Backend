@@ -15,7 +15,7 @@ import { NotFoundError } from './errors/NotFoundError';
 const app=express()
 connectDB()
 
-app.use(express.json())
+app.use(express.json())  
 app.use(express.urlencoded({extended:true}))
 
 

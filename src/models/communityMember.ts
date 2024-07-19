@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 
 // Define interface for Community Member document
 interface ICommunityMember extends Document {
-    fullName: string;
+    userName: string;
     email: string;
     contactNo: string;
      block: string;
@@ -11,7 +11,7 @@ interface ICommunityMember extends Document {
 }
 
 const communityMemberSchema: Schema<ICommunityMember> = new mongoose.Schema({
-    fullName: {
+    userName: {
         type: String,
         required: true
     },

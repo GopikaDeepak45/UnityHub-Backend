@@ -12,13 +12,14 @@ interface PostInterface extends Document {
   userId: mongoose.Types.ObjectId;
   content: string;
   communityId: mongoose.Types.ObjectId;
+  groupId: mongoose.Types.ObjectId;
   media: MediaInterface[]; 
   createdAt: Date;
   likes: mongoose.Types.ObjectId[]; 
   comments: mongoose.Types.ObjectId[];
 }
 
-const postSchema = new Schema<PostInterface>({
+const groupsPostSchema = new Schema<PostInterface>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -32,6 +33,11 @@ const postSchema = new Schema<PostInterface>({
   communityId: {
     type: Schema.Types.ObjectId,
     ref: 'Community',
+    required: true,
+  },
+  groupId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Group', // Reference to the Group model
     required: true,
   },
   media: [
@@ -66,11 +72,11 @@ const postSchema = new Schema<PostInterface>({
   comments:[
     {
       type: Schema.Types.ObjectId,
-      ref: 'Comment',
+      ref: 'GroupsComment',
     },
   ],
 });
 
-const Post = mongoose.model<PostInterface>('Post', postSchema);
+const GroupsPost = mongoose.model<PostInterface>('GroupsPost', groupsPostSchema);
 
-export default Post;
+export default GroupsPost;

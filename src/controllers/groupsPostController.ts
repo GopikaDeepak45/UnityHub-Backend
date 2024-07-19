@@ -7,6 +7,8 @@ import Post from "../models/post";
 import mongoose from "mongoose";
 import { ObjectId } from "mongodb";
 import Comment from "../models/comments";
+import GroupsPost from "../models/groupsPost";
+import GroupsComment from "../models/groupsComments";
 import { ForbiddenError } from "../errors/ForbiddenError";
 
 interface MediaData {
@@ -19,22 +21,17 @@ interface MediaInterface {
   data: MediaData;
   type: "image" | "video";
 }
-const fetchPostData = asyncErrorHandler(async (req: Request, res: Response) => {
-  const { userId, page, limit } = req.query;
+const fetchPostDataGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  const { groupId, page, limit } = req.query;
 
-  // Convert page and limit to integers
+ 
   const pageNumber = parseInt(page as unknown as string, 10);
   const limitNumber = parseInt(limit as unknown as string, 10);
 
-  // Calculate the number of documents to skip
   const skip = (pageNumber - 1) * limitNumber;
-
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new NotFoundError("User not found");
-  }
-  // Fetch posts from the database with pagination
-  const posts = await Post.find({ communityId: user.communityId })
+ 
+ 
+  const posts = await GroupsPost.find({ groupId })
     .sort({ createdAt: -1 }) // Sort by latest createdAt date
     .skip(skip) // Skip the number of documents
     .limit(limitNumber) // Limit the number of documents
@@ -42,8 +39,8 @@ const fetchPostData = asyncErrorHandler(async (req: Request, res: Response) => {
     .populate("comments.userId"); // Populate comment user details
 
   // Get the total number of posts
-  const totalPosts = await Post.countDocuments({
-    communityId: user.communityId,
+  const totalPosts = await GroupsPost.countDocuments({
+    groupId
   });
 
   // Check if there are more posts to load
@@ -57,72 +54,29 @@ const fetchPostData = asyncErrorHandler(async (req: Request, res: Response) => {
     hasMore,
   });
 });
-const fetchPostDataUser = asyncErrorHandler(async (req: Request, res: Response) => {
-  const { userId, page, limit } = req.query;
-
-  // Convert page and limit to integers
-  const pageNumber = parseInt(page as unknown as string, 10);
-  const limitNumber = parseInt(limit as unknown as string, 10);
-
-  // Calculate the number of documents to skip
-  const skip = (pageNumber - 1) * limitNumber;
-  console.log("skippp", skip);
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new NotFoundError("User not found");
-  }
-  // Fetch posts from the database with pagination
-  const posts = await Post.find({ userId })
-    .sort({ createdAt: -1 }) // Sort by latest createdAt date
-    .skip(skip) // Skip the number of documents
-    .limit(limitNumber) // Limit the number of documents
-    .populate("userId", "userName profileImg") // Populate user details
-    .populate("comments.userId"); // Populate comment user details
-
-  // Get the total number of posts
-  const totalPosts = await Post.countDocuments({
-    userId
-  });
-
-  // Check if there are more posts to load
-  const hasMore = pageNumber * limitNumber < totalPosts;
-
-  // Return the posts and pagination info
-  res.status(200).json({
-    posts,
-    currentPage: pageNumber,
-    totalPages: Math.ceil(totalPosts / limitNumber),
-    hasMore,
-  });
-});
-const fetchCommentsData = asyncErrorHandler(
+const fetchCommentsDataGroups = asyncErrorHandler(
   async (req: Request, res: Response) => {
+    console.log("enter fetch comments data group");
+
+    const { postId } = req.query;
     
-
-    const { postId, userId } = req.query;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new NotFoundError("User not found");
-    }
-    const comments = await Comment.find({ postId }).populate(
+    const comments = await GroupsComment.find({ postId }).populate(
       "userId",
       "userName profileImg"
     );
 
-    
-    // Return the posts and pagination info
+      
     res.status(200).json(comments);
   }
 );
 
-const addPost = asyncErrorHandler(async (req: Request, res: Response) => {
-  console.log("enter add post", req.body);
-  const { userId, content, imageData, videoData } = req.body;
+const addPostGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  console.log("enter add post groups", req.body);
+  const { userId,groupId, content, imageData, videoData } = req.body;
 
   // Validate input data
-  if (!userId || !content) {
-    throw new BadRequestError("User ID and content are required");
+  if (!userId || !content||!groupId) {
+    throw new BadRequestError("User ID, groupId and content are required");
   }
   const user = await User.findById(userId);
   if (!user) {
@@ -157,9 +111,10 @@ const addPost = asyncErrorHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Create a new post
-  const newPost = new Post({
+ 
+  const newPost = new GroupsPost({
     userId,
+    groupId,
     content,
     communityId: user.communityId,
     media,
@@ -171,10 +126,10 @@ const addPost = asyncErrorHandler(async (req: Request, res: Response) => {
   // Respond with the saved post
   res.status(201).json(savedPost);
 });
-const deletePost = asyncErrorHandler(async (req: Request, res: Response) => {
-  console.log("ENTER DELETE POST", req.query);
+const deleteGroupPost = asyncErrorHandler(async (req: Request, res: Response) => {
+  console.log("ENTER DELETE GROUP POST", req.query);
 
-
+  // Explicitly convert query parameters to strings
   const postId = req.query.postId?.toString();
   const userId = req.query.userId?.toString();
 
@@ -192,7 +147,7 @@ const deletePost = asyncErrorHandler(async (req: Request, res: Response) => {
     );
   }
 
- 
+  // Check if postId and userId are valid ObjectIds
   if (!ObjectId.isValid(postId) || !ObjectId.isValid(userId)) {
     throw new BadRequestError("Invalid postId or userId");
   }
@@ -200,23 +155,24 @@ const deletePost = asyncErrorHandler(async (req: Request, res: Response) => {
   const postObjectId = new ObjectId(postId);
   const userObjectId = new ObjectId(userId);
 
-  const post = await Post.findById(postObjectId);
+  const post = await GroupsPost.findById(postObjectId);
   if (!post) {
     throw new NotFoundError("Post not found");
   }
 
-  
+  // Check if the user requesting the deletion is the owner of the post
   if (!post.userId.equals(userObjectId)) {
     throw new ForbiddenError("You are not authorized to delete this post");
   }
 
- 
-   await Post.deleteOne({ _id: postObjectId });
+  // Delete the post
+  await GroupsPost.deleteOne({ _id: postObjectId });
 
-  res.status(200).json({ message: "Post deleted successfully" });
+  res.status(200).json({ message: "Group post deleted successfully" });
 });
-const addLike = asyncErrorHandler(async (req: Request, res: Response) => {
-  console.log("ENTER LIKE POST", req.query);
+
+const addLikeGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  console.log("ENTER LIKE POST groups", req.query);
   const postId = req.query.postId;
   const userId = req.query.userId;
 
@@ -239,7 +195,7 @@ const addLike = asyncErrorHandler(async (req: Request, res: Response) => {
   // Convert userId to ObjectId
   const userObjectId = new ObjectId(userId);
 
-  const post = await Post.findById(postId);
+  const post = await GroupsPost.findById(postId);
   if (!post) {
     throw new NotFoundError("Post data not found");
   }
@@ -252,8 +208,8 @@ const addLike = asyncErrorHandler(async (req: Request, res: Response) => {
 
   res.status(200).json(post);
 });
-const deleteLike = asyncErrorHandler(async (req: Request, res: Response) => {
-  console.log("enter unlike", req.query);
+const deleteLikeGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  console.log("enter unlike grp", req.query);
   const postId = req.query.postId;
   const userId = req.query.userId;
 
@@ -268,30 +224,23 @@ const deleteLike = asyncErrorHandler(async (req: Request, res: Response) => {
     );
   }
 
-  const post = await Post.findById(postId);
+  const post = await GroupsPost.findById(postId);
   if (!post) {
     throw new NotFoundError("Post data not found");
   }
-  console.log("post likes before:", post.likes);
-  console.log("userId:", userId);
-
-  // Convert userId to ObjectId
+ 
   const userObjectId = new ObjectId(userId);
-
-  // Remove userId from likes
 
   post.likes = post.likes.filter(
     (objId) => objId.toString() !== userObjectId.toString()
   );
 
-  console.log("post likes after:", post.likes);
-
-  await post.save();
+   await post.save();
 
   res.status(200).json(post);
 });
-const addCommentLike = asyncErrorHandler(async (req: Request, res: Response) => {
-  console.log("ENTER LIKE comment", req.query);
+const addCommentLikeGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  console.log("ENTER LIKE comment grp", req.query);
   const commentId = req.query.commentId;
   const userId = req.query.userId;
 
@@ -314,7 +263,7 @@ const addCommentLike = asyncErrorHandler(async (req: Request, res: Response) => 
   // Convert userId to ObjectId
   const userObjectId = new ObjectId(userId);
 
-  const comment = await Comment.findById(commentId);
+  const comment = await GroupsComment.findById(commentId);
   if (!comment) {
     throw new NotFoundError("Comment data not found");
   }
@@ -327,8 +276,8 @@ const addCommentLike = asyncErrorHandler(async (req: Request, res: Response) => 
 
   res.status(200).json(comment);
 });
-const deleteCommentLike = asyncErrorHandler(async (req: Request, res: Response) => {
-  console.log("ENTER UNLIKE comment", req.query);
+const deleteCommentLikeGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  console.log("ENTER UNLIKE comment grp", req.query);
 
   // Explicitly convert query parameters to strings
   const commentId = req.query.commentId?.toString();
@@ -356,7 +305,7 @@ const deleteCommentLike = asyncErrorHandler(async (req: Request, res: Response) 
   const userObjectId = new ObjectId(userId);
   const commentObjectId = new ObjectId(commentId);
 
-  const comment = await Comment.findById(commentObjectId);
+  const comment = await GroupsComment.findById(commentObjectId);
   if (!comment) {
     throw new NotFoundError("Comment data not found");
   }
@@ -375,19 +324,20 @@ const deleteCommentLike = asyncErrorHandler(async (req: Request, res: Response) 
   res.status(200).json(comment);
 });
 
-const addComment = asyncErrorHandler(async (req: Request, res: Response) => {
-  const { userId, content, postId } = req.body;
+const addCommentGroups = asyncErrorHandler(async (req: Request, res: Response) => {
+  const { userId,groupId, content, postId } = req.body;
   console.log("add comment", req.body);
   if (!userId || !content || !postId) {
     throw new BadRequestError("user id post id and comment are required");
   }
-  const post = await Post.findById(postId);
+  const post = await GroupsPost.findById(postId);
   if (!post) {
     throw new NotFoundError("Post data not found");
   }
 
-  const newComment = new Comment({
+  const newComment = new GroupsComment({
     postId,
+    groupId,
     userId,
     content,
     createdAt: new Date(),
@@ -401,14 +351,13 @@ const addComment = asyncErrorHandler(async (req: Request, res: Response) => {
   res.status(201).json(post);
 });
 export {
-  fetchPostData,
-  fetchPostDataUser,
-  fetchCommentsData,
-  addPost,
-  deletePost,
-  addLike,
-  addComment,
-  addCommentLike,
-  deleteCommentLike,
-  deleteLike,
+  fetchPostDataGroups,
+  fetchCommentsDataGroups,
+  addPostGroups,
+  deleteGroupPost,
+  addLikeGroups,
+  addCommentGroups,
+  addCommentLikeGroups,
+  deleteCommentLikeGroups,
+  deleteLikeGroups,
 };

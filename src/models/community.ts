@@ -3,7 +3,12 @@ interface Image {
     url: string;
     publicId: string
 }
-interface ICommunity extends Document {
+interface ServiceCategory {
+    [x: string]: any;
+    category: string;
+    serviceIds: mongoose.Types.ObjectId[];
+  }
+export interface CommunityInterface extends Document {
     name: string
     description?: string;
     location: string
@@ -12,9 +17,11 @@ interface ICommunity extends Document {
     members: mongoose.Types.ObjectId[];
     hero: Image | null;
     groups: mongoose.Types.ObjectId[];
+    pendingServices: mongoose.Types.ObjectId[]; 
+    categorizedServices: ServiceCategory[];
 }
 
-const communitySchema: Schema<ICommunity> = new mongoose.Schema({
+const communitySchema: Schema<CommunityInterface> = new mongoose.Schema({
     name: {
         type: String,
         required: true,
@@ -39,7 +46,15 @@ const communitySchema: Schema<ICommunity> = new mongoose.Schema({
         publicId: String
     },
 
-    groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }]
+    groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
+    pendingServices: [{ type: mongoose.Schema.Types.ObjectId, ref: 'UserService' }],
+    categorizedServices: [
+      {
+        category: String,
+        serviceIds: [mongoose.Schema.Types.ObjectId],
+      },
+    ],
+    
 }, {
     timestamps: true
 });

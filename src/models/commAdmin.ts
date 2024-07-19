@@ -25,7 +25,7 @@ const commAdminSchema: Schema<ICommAdmin> = new mongoose.Schema({
     },
     communityId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Community', // Reference to the Community model
+        ref: 'Community', 
         required: true
     },
     email: {
